@@ -35,7 +35,7 @@ class MastaCourseParticipantsModel extends Model
 {
     protected $table            = 'masta_course_participants';
     protected $primaryKey       = 'idparticipant';
-    protected $allowedFields    = ['id_peserta', 'role', 'tahun_masta', 'join_course'];
+    protected $allowedFields    = ['id_peserta', 'role', 'tahun_masta', 'join_course', 'keterangan'];
     protected $useTimestamps    = true;
     protected $createdField     = 'created_at';
     protected $updatedField     = 'updated_at';
@@ -49,17 +49,32 @@ class MastaCourseParticipantsModel extends Model
         return $query;
     }
 
-    public function simpan($id_peserta, $role, $tahun_masta, $join_course = 0)
+    public function simpan($id_peserta, $role, $tahun_masta, $keterangan, $join_course = 0)
     {
         $dt = [
             "id_peserta" => $id_peserta,
             "role" => $role,
             "tahun_masta" => $tahun_masta,
-            "join_course" => $join_course
+            "join_course" => $join_course,
+            "keterangan" => $keterangan
         ];
         $query = $this->insert($dt);
         if ($query) {
             return $this->getInsertID();
+        } else {
+            return 0;
+        }
+    }
+
+    public function update_participant_role($id, $role, $keterangan)
+    {
+        $dt = [
+            "role" => $role,
+            "keterangan" => $keterangan
+        ];
+        $query = $this->update($id, $dt);
+        if ($query) {
+            return $id;
         } else {
             return 0;
         }

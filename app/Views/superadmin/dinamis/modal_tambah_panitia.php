@@ -4,6 +4,7 @@
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <input type="hidden" value="<?= $role; ?>" class="role" name="role">
+            <input type="hidden" value="<?= $keterangan; ?>" class="keterangan" name="keterangan">
 
             <div class="modal-body">
                 <div class="row">

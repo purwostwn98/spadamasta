@@ -274,15 +274,19 @@ class Superadmin extends BaseController
     public function dinamis_load_setting_panitia()
     {
         $id = $this->request->getVar("id");
+        $keterangan = $this->request->getVar("keterangan");
+
         $mastaCourse = $this->mastaCourseModel->where("id", $id)->first();
         $peserta = $this->mastaCourseParticipantsModel
             ->where(["tahun_masta" => $mastaCourse["tahun_masta"], "role" => 4])
+            ->where("keterangan", $keterangan)
             ->join("auth_users as user", "masta_course_participants.id_peserta = user.username")
             ->select("idparticipant, username, nama_pengguna")
             ->orderBy("nama_pengguna")
             ->findAll();
         $datatampil = [
-            "peserta" => $peserta
+            "peserta" => $peserta,
+            "keterangan" => $keterangan
         ];
         $data = [
             'tabel' => view("superadmin/dinamis/tabel_panitia", $datatampil)
@@ -409,7 +413,8 @@ class Superadmin extends BaseController
                                 "id_peserta" => $nim,
                                 "role" => 5,
                                 "tahun_masta" => $tahun_masta,
-                                "join_course" => 0
+                                "join_course" => 0,
+                                "keterangan" => null
                             ];
                         }
                     }
@@ -468,8 +473,10 @@ class Superadmin extends BaseController
     public function dinamis_modal_cari_panitia()
     {
         $role = $this->request->getVar("role");
+        $keterangan = $this->request->getVar("keterangan");
         $datatampil = [
-            "role" => $role
+            "role" => $role,
+            "keterangan" => $keterangan
         ];
         $data = [
             'modal' => view("superadmin/dinamis/modal_tambah_panitia", $datatampil)
@@ -477,10 +484,12 @@ class Superadmin extends BaseController
         echo json_encode($data);
     }
 
+    //yang termasuk panitia pada fungsi ini (dosen, panitia, dutamasta)
     public function dinamis_hasil_cari_panitia()
     {
         $key = $this->request->getPost("key");
         $role = $this->request->getPost("role");
+        $keterangan = $this->request->getPost("keterangan");
         $users = $this->authUsersModel->orderBy('username', 'ASC')
             ->like('LOWER(username)', strtolower(strval($key)))->orLike('LOWER(nama_pengguna)', strtolower(strval($key)))
             ->findAll();
@@ -490,7 +499,7 @@ class Superadmin extends BaseController
             $tr .= '<tr><td>' . $key + 1 . '</td>
             <td>' . $v["username"] . '</td>
             <td>' . $v["nama_pengguna"] . '</td>
-            <td class="text-center"><button class="btn btn-primary btn-sm" value="' . $v["username"] . '-' . $role . '" onclick="makePanitia(this.value)"><i class="fa fa-user-plus"></i></button></td>
+            <td class="text-center"><button class="btn btn-primary btn-sm" value="' . $v["username"] . '-' . $role . '-' . $keterangan . '" onclick="makePanitia(this.value)"><i class="fa fa-user-plus"></i></button></td>
             </tr>';
         }
         $datakirim = [
@@ -505,24 +514,34 @@ class Superadmin extends BaseController
         $ec = explode("-", $params);
         $iduser = $ec[0];
         $role = $ec[1];
+        $keterangan = $ec[2];
         $idmasta = $this->request->getVar("idmasta");
         $mastacourse = $this->mastaCourseModel->where("id", $idmasta)->first();
         $tahun_masta = $mastacourse["tahun_masta"];
         // simpan
-        $query = $this->mastaCourseParticipantsModel->simpan($iduser, $role, $tahun_masta, 0);
+        $cek = $this->mastaCourseParticipantsModel->where(["id_peserta" => $iduser, "tahun_masta" => $tahun_masta])->first();
+        if ($cek >= 1) {
+            if ($role != $cek["role"] || $keterangan != $cek["keterangan"]) {
+                $query = $this->mastaCourseParticipantsModel->update_participant_role($cek["idparticipant"], $role, $keterangan);
+            }
+        } else {
+            $query = $this->mastaCourseParticipantsModel->simpan($iduser, $role, $tahun_masta, $keterangan, 0);
+        }
         if ($query != 0) {
             $msg = [
                 "status" => true,
                 "token" => csrf_hash(),
                 "pesan" => ($role == 4 ? "Panitia" : "Dosen") . "berhasil ditambahkan",
-                "role" => $role
+                "role" => $role,
+                "keterangan" => $keterangan
             ];
         } else {
             $msg = [
                 "status" => false,
                 "token" => csrf_hash(),
                 "pesan" => ($role == 4 ? "Panitia" : "Dosen") . "gagal ditambahkan",
-                "role" => $role
+                "role" => $role,
+                "keterangan" => $keterangan
             ];
         }
         echo json_encode($msg);

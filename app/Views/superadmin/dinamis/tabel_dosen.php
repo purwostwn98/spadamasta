@@ -3,7 +3,7 @@
         <h5>Dosen / Fasilitator Masta</h5>
     </div>
     <div class="col-md-6 text-right">
-        <p><button class="btn btn-primary btn-sm" onclick="modalPanitia('3')"><i class="fa fa-add"></i>Tambah Dosen</button></p>
+        <p><button class="btn btn-primary btn-sm" onclick="modalPanitia('3', 'editingteacher')"><i class="fa fa-add"></i>Tambah Dosen</button></p>
     </div>
 </div>
 <div class="row">

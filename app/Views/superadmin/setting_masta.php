@@ -36,7 +36,8 @@
             <div class="row">
                 <div class="col-md-5">
                     <button class="btn btn-sm btn-primary" onclick="loadPeserta('<?= $course['id']; ?>', 'lmbg1023')">Peserta</button> |
-                    <button class="btn btn-sm btn-warning" onclick="loadPanitia('<?= $course['id']; ?>')">Panitia</button> |
+                    <button class="btn btn-sm btn-warning" onclick="loadPanitia('<?= $course['id']; ?>', 'duta')">Duta Masta</button> |
+                    <button class="btn btn-sm btn-secondary" onclick="loadPanitia('<?= $course['id']; ?>', 'panitia')">Panitia</button> |
                     <button class="btn btn-sm btn-danger" onclick="loadDosen('<?= $course['id']; ?>')">Dosen / Fasilitator</button>
                 </div>
             </div>
@@ -170,13 +171,14 @@
         });
     }
 
-    function loadPanitia(id) {
+    function loadPanitia(id, keterangan) {
         $.ajax({
             url: "<?= site_url('superadmin/dinamis/load_setting_panitia'); ?>",
             type: "POST",
             dataType: "json",
             data: {
-                id: id
+                id: id,
+                keterangan: keterangan
             },
             beforeSend: function() {},
             complete: function() {},
@@ -212,13 +214,14 @@
 </script>
 
 <script>
-    function modalPanitia(role) {
+    function modalPanitia(role, keterangan) {
         $.ajax({
             url: "<?= site_url('superadmin/dinamis/modal_cari_panitia'); ?>",
             type: "POST",
             dataType: "json",
             data: {
-                role: role
+                role: role,
+                keterangan: keterangan
             },
             beforeSend: function() {},
             complete: function() {},
@@ -239,13 +242,15 @@
     function handleSearch() {
         var key = $(".inputcari").val();
         var role = $(".role").val();
+        var keterangan = $(".keterangan").val();
         $.ajax({
             url: "<?= site_url('superadmin/dinamis/hasil_cari_panitia'); ?>",
             type: "POST",
             dataType: "json",
             data: {
                 key: key,
-                role: role
+                role: role,
+                keterangan: keterangan
             },
             beforeSend: function() {},
             complete: function() {},
@@ -274,6 +279,7 @@
             beforeSend: function() {},
             complete: function() {},
             success: function(response) {
+                $("#modalTambahPanitia").modal("hide");
                 if (response.status == true) {
                     iziToast.success({
                         title: 'Berhasil!',
@@ -289,7 +295,7 @@
                 }
 
                 if (response.role == 4) {
-                    loadPanitia(id)
+                    loadPanitia(id, response.keterangan)
                 } else {
                     loadDosen(id)
                 }

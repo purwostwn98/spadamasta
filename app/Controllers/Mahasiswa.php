@@ -50,6 +50,7 @@ class Mahasiswa extends BaseController
         return view('mahasiswa/dashboard', $data);
     }
 
+    // open ini digunakan untuk dosen, duta dan panitia juga
     public function open_masta()
     {
         $idmastacourse = $this->request->getVar("id");
@@ -100,6 +101,9 @@ class Mahasiswa extends BaseController
                 $this->moodleRoleAssignmentModel->update_role($m["id"], $idusermoodle, $s["role"]);
             }
         }
+
+        // cek group fakultas mahasiswa dan duta
+
         $tokenmasukmoodle = $this->session->get("token_moodle");
         return redirect()->to($_ENV['urlmoodle'] . '/course/view.php?id=' . $id_course . '&token=' . $tokenmasukmoodle);
     }
