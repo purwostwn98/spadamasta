@@ -13,6 +13,9 @@
                 <th>No</th>
                 <th>ID</th>
                 <th>Nama</th>
+                <?php if ($keterangan == "duta") { ?>
+                    <th>Fakultas</th>
+                <?php } ?>
                 <th>Action</th>
             </thead>
             <tbody>
@@ -21,6 +24,9 @@
                         <td><?= $key + 1; ?></td>
                         <td><?= $v["username"]; ?></td>
                         <td><?= $v["nama_pengguna"]; ?></td>
+                        <?php if ($keterangan == "duta") { ?>
+                            <td><?= $v["nama_fakultas"]; ?></td>
+                        <?php } ?>
                         <td><button class="btn btn-warning btn-sm"><i class="fa fa-trash"></i></button></td>
                     </tr>
                 <?php } ?>

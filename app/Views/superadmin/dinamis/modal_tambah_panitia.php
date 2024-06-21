@@ -1,6 +1,6 @@
 <!-- digunakan untuk dosen juga -->
 <!-- Modal unggah panitia -->
-<div class="modal fade" id="modalTambahPanitia" tabindex="-1" role="dialog" aria-labelledby="modalTambahPanitiaLabel" aria-hidden="true">
+<div class="modal fade" id="modalTambahPanitia" role="dialog" aria-labelledby="modalTambahPanitiaLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <input type="hidden" value="<?= $role; ?>" class="role" name="role">
@@ -13,6 +13,19 @@
                     </div>
                 </div>
                 <hr>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="form-group">
+                            <label for="selfakultas" class="text-primary"><b>Fakultas:</b></label>
+                            <select class="form-control select2" id="selfakultas">
+                                <option value="allfakultas">Semua Fakultas</option>
+                                <?php foreach ($fakultas as $p => $pr) { ?>
+                                    <option value="<?= $pr["idlembaga_fakultas"]; ?>"><?= $pr["nama_fakultas"]; ?></option>
+                                <?php } ?>
+                            </select>
+                        </div>
+                    </div>
+                </div>
                 <div class="row mb-3">
                     <div class="col-md-12">
                         <div class="d-flex">

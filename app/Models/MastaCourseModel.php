@@ -35,7 +35,7 @@ class MastaCourseParticipantsModel extends Model
 {
     protected $table            = 'masta_course_participants';
     protected $primaryKey       = 'idparticipant';
-    protected $allowedFields    = ['id_peserta', 'role', 'tahun_masta', 'join_course', 'keterangan'];
+    protected $allowedFields    = ['id_peserta', 'role', 'tahun_masta', 'join_course', 'keterangan', 'idlembaga_fakultas'];
     protected $useTimestamps    = true;
     protected $createdField     = 'created_at';
     protected $updatedField     = 'updated_at';
@@ -49,14 +49,15 @@ class MastaCourseParticipantsModel extends Model
         return $query;
     }
 
-    public function simpan($id_peserta, $role, $tahun_masta, $keterangan, $join_course = 0)
+    public function simpan($id_peserta, $role, $tahun_masta, $keterangan, $idlembaga_fakultas = null, $join_course = 0)
     {
         $dt = [
             "id_peserta" => $id_peserta,
             "role" => $role,
             "tahun_masta" => $tahun_masta,
             "join_course" => $join_course,
-            "keterangan" => $keterangan
+            "keterangan" => $keterangan,
+            "idlembaga_fakultas" => $idlembaga_fakultas
         ];
         $query = $this->insert($dt);
         if ($query) {
@@ -66,11 +67,12 @@ class MastaCourseParticipantsModel extends Model
         }
     }
 
-    public function update_participant_role($id, $role, $keterangan)
+    public function update_participant_role($id, $role, $keterangan, $idlembaga_fakultas)
     {
         $dt = [
             "role" => $role,
-            "keterangan" => $keterangan
+            "keterangan" => $keterangan,
+            "idlembaga_fakultas" => $idlembaga_fakultas
         ];
         $query = $this->update($id, $dt);
         if ($query) {

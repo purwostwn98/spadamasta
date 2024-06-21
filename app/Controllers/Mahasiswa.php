@@ -3,12 +3,17 @@
 namespace App\Controllers;
 
 use App\Models\AuthUsersModel;
+use App\Models\LembagaProdiModel;
+use App\Models\LembagaFakultasModel;
 use App\Models\MastaCourseModel;
 use App\Models\MastaCourseParticipantsModel;
 use App\Models\MoodleUserModel;
 use App\Models\MoodleUserEnrolmentModel;
 use App\Models\MoodleRoleAssignmentModel;
+use App\Models\MoodleGroupsModel;
+use App\Models\MoodleGroupsMembersModel;
 use CodeIgniter\I18n\Time;
+use SebastianBergmann\CodeCoverage\Report\PHP;
 
 class Mahasiswa extends BaseController
 {
@@ -18,15 +23,24 @@ class Mahasiswa extends BaseController
     protected $moodleUserModel;
     protected $userAuthModel;
     protected $moodleRoleAssignmentModel;
+    protected $moodleGroupsModel;
+    protected $moodleGroupsMembersModel;
+    protected $lembagaProdiModel;
+    protected $lembagaFakultasModel;
 
     public function __construct()
     {
+
+        $this->lembagaProdiModel = new LembagaProdiModel();
+        $this->lembagaFakultasModel = new LembagaFakultasModel();
         $this->userAuthModel = new AuthUsersModel();
         $this->mastaCourseModel = new MastaCourseModel();
         $this->mastaCourseParticipantsModel = new MastaCourseParticipantsModel();
         $this->moodleUserModel = new MoodleUserModel();
         $this->moodleUserEnrolmentModel = new MoodleUserEnrolmentModel();
         $this->moodleRoleAssignmentModel = new MoodleRoleAssignmentModel();
+        $this->moodleGroupsModel = new MoodleGroupsModel();
+        $this->moodleGroupsMembersModel = new MoodleGroupsMembersModel();
     }
 
     public function dashboard(): string
@@ -57,7 +71,6 @@ class Mahasiswa extends BaseController
         $nim = strtolower($this->session->get("userdata")["iduser"]);
         $r_mastacourse = $this->mastaCourseModel->where("id", $idmastacourse)->first();
 
-
         //siapkan data
         $id_course = $r_mastacourse['idcourse_moodle'];
         $enrolid = get_enrolid($id_course);
@@ -84,25 +97,52 @@ class Mahasiswa extends BaseController
             ->join('mdl_user', 'mdl_user_enrolments.userid = mdl_user.id')
             ->where(['enrolid' => $enrolid, 'userid' => $idusermoodle])->first();
 
+        $p = $this->mastaCourseParticipantsModel->where(["id_peserta" => $nim, "tahun_masta" => $r_mastacourse["tahun_masta"]])->first();
         if (empty($cek_enroled)) {
             //jika belum di enrol di course
             $this->moodleUserEnrolmentModel->simpan($enrolid, $idusermoodle);
             // assign sesuai role yang ada di database spada (masta_course_participants)
-            $p = $this->mastaCourseParticipantsModel->where(["id_peserta" => $nim, "tahun_masta" => $r_mastacourse["tahun_masta"]])->first();
             // edit join 
             $this->mastaCourseParticipantsModel->edit_joined($p["idparticipant"], 1);
             // asign di course moodle sebagai
             $this->moodleRoleAssignmentModel->simpan($contextid, $idusermoodle, $p["role"]);
         } else {
             // jika role di spada di update
-            $s = $this->mastaCourseParticipantsModel->where(["id_peserta" => $nim, "tahun_masta" => $r_mastacourse["tahun_masta"]])->first();
             $m = $this->moodleRoleAssignmentModel->where(["mdl_role_assignments.contextid" => $contextid, "userid" => $idusermoodle])->first();
-            if ($s["role"] != $m["roleid"]) {
-                $this->moodleRoleAssignmentModel->update_role($m["id"], $idusermoodle, $s["role"]);
+            if ($p["role"] != $m["roleid"]) {
+                $this->moodleRoleAssignmentModel->update_role($m["id"], $idusermoodle, $p["role"]);
             }
         }
 
         // cek group fakultas mahasiswa dan duta
+
+        if ($p["keterangan"] != "editingteacher" || $p["keterangan"] != "panitia") {
+            if ($p["idlembaga_fakultas"] != null || $p["idlembaga_fakultas"] != "allfakultas") {
+                //cek group di moodle
+                $idNumberGroup = md5($p["idlembaga_fakultas"] . $p["tahun_masta"]);
+                $group = $this->moodleGroupsModel->where(['idnumber' => $idNumberGroup, 'courseid' => $id_course])->first();
+                if (!empty($group)) {
+                    $idgroup = $group['id'];
+                } else {
+                    $f = $this->lembagaFakultasModel->where("idlembaga_fakultas", $p["idlembaga_fakultas"])->select("nama_fakultas")->first();
+                    $nama_kelas = $f["nama_fakultas"];
+                    $idgroup = $this->moodleGroupsModel->simpan($id_course, $idNumberGroup, $nama_kelas);
+                }
+
+                //perbarui fakultas
+                $group_old = $this->moodleGroupsMembersModel->where('userid', $idusermoodle)
+                    ->join('mdl_groups', 'mdl_groups_members.groupid = mdl_groups.id')
+                    ->where('mdl_groups.idnumber', $idNumberGroup)
+                    ->where('courseid', $id_course)->first();
+                if (empty($group_old['groupid'])) {
+                    // assign user ke group fakultas
+                    $this->moodleGroupsMembersModel->simpan($idgroup, $idusermoodle);
+                } elseif ($group_old['groupid'] != $idgroup) {
+                    // update user ke group fakultas baru 
+                    $this->moodleGroupsMembersModel->update_kelas($group_old['groupid'], $idgroup, $idusermoodle);
+                }
+            }
+        }
 
         $tokenmasukmoodle = $this->session->get("token_moodle");
         return redirect()->to($_ENV['urlmoodle'] . '/course/view.php?id=' . $id_course . '&token=' . $tokenmasukmoodle);

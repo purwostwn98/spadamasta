@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Models\AuthUsersModel;
 use App\Models\LembagaProdiModel;
+use App\Models\LembagaFakultasModel;
 use App\Models\MastaCourseModel;
 use App\Models\MastaCourseParticipantsModel;
 use App\Models\MasterMahasiswaModel;
@@ -18,6 +19,7 @@ class Superadmin extends BaseController
 {
     //protected variables
     protected $lembagaProdiModel;
+    protected $lembagaFakultasModel;
     protected $masterMahasiswaModel;
     protected $authUsersModel;
     protected $mastaCourseModel;
@@ -30,6 +32,7 @@ class Superadmin extends BaseController
     {
         // call model
         $this->lembagaProdiModel = new LembagaProdiModel();
+        $this->lembagaFakultasModel = new LembagaFakultasModel();
         $this->masterMahasiswaModel = new MasterMahasiswaModel();
         $this->authUsersModel = new AuthUsersModel();
         $this->mastaCourseModel = new MastaCourseModel();
@@ -277,13 +280,25 @@ class Superadmin extends BaseController
         $keterangan = $this->request->getVar("keterangan");
 
         $mastaCourse = $this->mastaCourseModel->where("id", $id)->first();
-        $peserta = $this->mastaCourseParticipantsModel
-            ->where(["tahun_masta" => $mastaCourse["tahun_masta"], "role" => 4])
-            ->where("keterangan", $keterangan)
-            ->join("auth_users as user", "masta_course_participants.id_peserta = user.username")
-            ->select("idparticipant, username, nama_pengguna")
-            ->orderBy("nama_pengguna")
-            ->findAll();
+        if ($keterangan == "duta") {
+            $peserta = $this->mastaCourseParticipantsModel
+                ->where(["tahun_masta" => $mastaCourse["tahun_masta"], "role" => 4])
+                ->where("keterangan", $keterangan)
+                ->join("auth_users as user", "masta_course_participants.id_peserta = user.username")
+                ->join("master_lembaga_fakultas as f", "masta_course_participants.idlembaga_fakultas = f.idlembaga_fakultas")
+                ->select("idparticipant, username, nama_pengguna, nama_fakultas")
+                ->orderBy("nama_pengguna")
+                ->findAll();
+        } else {
+            $peserta = $this->mastaCourseParticipantsModel
+                ->where(["tahun_masta" => $mastaCourse["tahun_masta"], "role" => 4])
+                ->where("keterangan", $keterangan)
+                ->join("auth_users as user", "masta_course_participants.id_peserta = user.username")
+                ->select("idparticipant, username, nama_pengguna")
+                ->orderBy("nama_pengguna")
+                ->findAll();
+        }
+
         $datatampil = [
             "peserta" => $peserta,
             "keterangan" => $keterangan
@@ -374,12 +389,14 @@ class Superadmin extends BaseController
                 $reader = new \PhpOffice\PhpSpreadsheet\Reader\Xlsx();
                 $spreadsheet = $reader->load($file_excel);
 
-                $idmk = $this->request->getPost('idmk');
-                $periode = $this->request->getPost('periode');
+                // $idmk = $this->request->getPost('idmk');
+                // $periode = $this->request->getPost('periode');
                 // validasi di dalam file excelnya (mencocokan kode)
                 if (!empty($spreadsheet->getSheetByName("peserta"))) {
                     $tahun_masta = $spreadsheet->setActiveSheetIndexByName("peserta")->getCell('A7')->getValue();
                     $idlembaga = $spreadsheet->setActiveSheetIndexByName("peserta")->getCell('A8')->getValue();
+                    $rlembaga = $this->lembagaProdiModel->where("idlembaga_prodi", $idlembaga)->first();
+                    $idfakultas = $rlembaga["idlembaga_fakultas"];
 
                     $data = $spreadsheet->setActiveSheetIndexByName("peserta")->toArray();
                     $arr_nim = [];
@@ -414,7 +431,8 @@ class Superadmin extends BaseController
                                 "role" => 5,
                                 "tahun_masta" => $tahun_masta,
                                 "join_course" => 0,
-                                "keterangan" => null
+                                "keterangan" => "student",
+                                "idlembaga_fakultas" => $idfakultas
                             ];
                         }
                     }
@@ -431,12 +449,17 @@ class Superadmin extends BaseController
                         }
                     }
 
-                    $peserta_tersimpan = $this->mastaCourseParticipantsModel->whereIn("id_peserta", $arr_nim)->select("id_peserta, tahun_masta, idparticipant")->findAll();
+                    $peserta_tersimpan = $this->mastaCourseParticipantsModel->whereIn("id_peserta", $arr_nim)
+                        ->where("tahun_masta", $tahun_masta)
+                        ->select("id_peserta, tahun_masta, idparticipant, idlembaga_fakultas")->findAll();
                     foreach ($peserta_tersimpan as $p => $psta) {
                         if (array_key_exists($psta["id_peserta"], $arr_peserta)) {
-                            if ($psta["tahun_masta"] == $tahun_masta) {
-                                unset($arr_peserta[$psta["id_peserta"]]);
+                            if ($psta["idlembaga_fakultas"] != $idfakultas) {
+                                //update fakultas
+                                $this->mastaCourseParticipantsModel->update_participant_role($psta["idparticipant"], 5, "student", $idfakultas);
                             }
+                            //hapus dari array tambah supaya tidak ikut ditambah batch
+                            unset($arr_peserta[$psta["id_peserta"]]);
                         }
                     }
 
@@ -474,9 +497,11 @@ class Superadmin extends BaseController
     {
         $role = $this->request->getVar("role");
         $keterangan = $this->request->getVar("keterangan");
+        $fakultas = $this->lembagaFakultasModel->findAll();
         $datatampil = [
             "role" => $role,
-            "keterangan" => $keterangan
+            "keterangan" => $keterangan,
+            "fakultas" => $fakultas
         ];
         $data = [
             'modal' => view("superadmin/dinamis/modal_tambah_panitia", $datatampil)
@@ -490,6 +515,7 @@ class Superadmin extends BaseController
         $key = $this->request->getPost("key");
         $role = $this->request->getPost("role");
         $keterangan = $this->request->getPost("keterangan");
+        $fakultas = $this->request->getPost("fakultas");
         $users = $this->authUsersModel->orderBy('username', 'ASC')
             ->like('LOWER(username)', strtolower(strval($key)))->orLike('LOWER(nama_pengguna)', strtolower(strval($key)))
             ->findAll();
@@ -499,7 +525,7 @@ class Superadmin extends BaseController
             $tr .= '<tr><td>' . $key + 1 . '</td>
             <td>' . $v["username"] . '</td>
             <td>' . $v["nama_pengguna"] . '</td>
-            <td class="text-center"><button class="btn btn-primary btn-sm" value="' . $v["username"] . '-' . $role . '-' . $keterangan . '" onclick="makePanitia(this.value)"><i class="fa fa-user-plus"></i></button></td>
+            <td class="text-center"><button class="btn btn-primary btn-sm" value="' . $v["username"] . '-' . $role . '-' . $keterangan . '-' . $fakultas . '" onclick="makePanitia(this.value)"><i class="fa fa-user-plus"></i></button></td>
             </tr>';
         }
         $datakirim = [
@@ -515,23 +541,24 @@ class Superadmin extends BaseController
         $iduser = $ec[0];
         $role = $ec[1];
         $keterangan = $ec[2];
+        $fakultas = $ec[3];
         $idmasta = $this->request->getVar("idmasta");
         $mastacourse = $this->mastaCourseModel->where("id", $idmasta)->first();
         $tahun_masta = $mastacourse["tahun_masta"];
         // simpan
         $cek = $this->mastaCourseParticipantsModel->where(["id_peserta" => $iduser, "tahun_masta" => $tahun_masta])->first();
         if ($cek >= 1) {
-            if ($role != $cek["role"] || $keterangan != $cek["keterangan"]) {
-                $query = $this->mastaCourseParticipantsModel->update_participant_role($cek["idparticipant"], $role, $keterangan);
+            if ($role != $cek["role"] || $keterangan != $cek["keterangan"] || $fakultas != $cek["idlembaga_fakultas"]) {
+                $query = $this->mastaCourseParticipantsModel->update_participant_role($cek["idparticipant"], $role, $keterangan, $fakultas);
             }
         } else {
-            $query = $this->mastaCourseParticipantsModel->simpan($iduser, $role, $tahun_masta, $keterangan, 0);
+            $query = $this->mastaCourseParticipantsModel->simpan($iduser, $role, $tahun_masta, $keterangan, $fakultas, 0);
         }
         if ($query != 0) {
             $msg = [
                 "status" => true,
                 "token" => csrf_hash(),
-                "pesan" => ($role == 4 ? "Panitia" : "Dosen") . "berhasil ditambahkan",
+                "pesan" => ($role == 4 ? ucwords($keterangan) : "Dosen") . " berhasil ditambahkan",
                 "role" => $role,
                 "keterangan" => $keterangan
             ];
@@ -539,7 +566,7 @@ class Superadmin extends BaseController
             $msg = [
                 "status" => false,
                 "token" => csrf_hash(),
-                "pesan" => ($role == 4 ? "Panitia" : "Dosen") . "gagal ditambahkan",
+                "pesan" => ($role == 4 ? "Panitia" : "Dosen") . " gagal ditambahkan",
                 "role" => $role,
                 "keterangan" => $keterangan
             ];

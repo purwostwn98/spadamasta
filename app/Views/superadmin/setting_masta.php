@@ -228,6 +228,10 @@
             success: function(response) {
                 $(".mdpan").html(response.modal);
                 $("#modalTambahPanitia").modal("show");
+                $('#selfakultas').select2({
+                    dropdownParent: $("#modalTambahPanitia")
+                });
+
             },
             error: function(xhr, ajaxOptions, thrownError) {
                 alert(xhr.status + "\n" + xhr.responseText + "\n" + thrownError);
@@ -243,6 +247,7 @@
         var key = $(".inputcari").val();
         var role = $(".role").val();
         var keterangan = $(".keterangan").val();
+        var fakultas = $("#selfakultas").val();
         $.ajax({
             url: "<?= site_url('superadmin/dinamis/hasil_cari_panitia'); ?>",
             type: "POST",
@@ -250,7 +255,8 @@
             data: {
                 key: key,
                 role: role,
-                keterangan: keterangan
+                keterangan: keterangan,
+                fakultas: fakultas
             },
             beforeSend: function() {},
             complete: function() {},
