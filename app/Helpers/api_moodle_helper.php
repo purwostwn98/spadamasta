@@ -45,3 +45,15 @@ function core_course_create($fullname, $shortname)
     $param = 'wsfunction=core_course_create_courses&courses[0][fullname]=' . $fullname . '&courses[0][shortname]=' . $shortname . '&courses[0][categoryid]=1&courses[0][numsections]=3';
     return core_api($param);
 }
+
+function core_delete_course($idcoursemoodle)
+{
+    $params = 'wsfunction=core_course_delete_courses&courseids[0]=' . $idcoursemoodle;
+    return core_api($params);
+}
+
+function get_completion_activities($courseid, $usermoodleid)
+{
+    $params = "wsfunction=core_completion_get_activities_completion_status&courseid=" . $courseid . "&userid=" . $usermoodleid;
+    return core_api($params);
+}

@@ -30,6 +30,7 @@ $routes->get('/superadmin/download_excel_peserta', 'Superadmin::download_excel_p
 $routes->post('/superadmin/dinamis/modal_cari_panitia', 'Superadmin::dinamis_modal_cari_panitia');
 $routes->post('/superadmin/dinamis/hasil_cari_panitia', 'Superadmin::dinamis_hasil_cari_panitia');
 $routes->post('/superadmin/do_jadikan_panitia', 'Superadmin::do_jadikan_panitia');
+$routes->post('/superadmin/hapus-course-masta', 'Superadmin::hapus_course_masta');
 
 // Mahasiswa
 $routes->get('/mahasiswa/dashboard', 'Mahasiswa::dashboard');

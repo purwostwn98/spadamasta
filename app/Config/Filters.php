@@ -25,6 +25,9 @@ class Filters extends BaseConfig
         'honeypot'      => Honeypot::class,
         'invalidchars'  => InvalidChars::class,
         'secureheaders' => SecureHeaders::class,
+        'authFilter'    => \App\Filters\authFilter::class,
+        'mahasiswaFilter'  => \App\Filters\mahasiswaFilter::class,
+        'panitiaFilter'  => \App\Filters\panitiaFilter::class
     ];
 
     /**
@@ -37,11 +40,22 @@ class Filters extends BaseConfig
     public array $globals = [
         'before' => [
             // 'honeypot',
-            // 'csrf',
+            'csrf' => ['except' => [
+                'superadmin/dinamis/*', 'mahasiswa/dinamis/*'
+            ]],
+            'authFilter' => ['except' => [
+                '/', '/auth/*', '/auth/login/*/*', '/logout'
+            ]],
             // 'invalidchars',
         ],
         'after' => [
             'toolbar',
+            'mahasiswaFilter' => ['except' => [
+                '/mahasiswa/*'
+            ]],
+            'panitiaFilter' => ['except' => [
+                '/mahasiswa/*', '/panitia/*'
+            ]],
             // 'honeypot',
             // 'secureheaders',
         ],

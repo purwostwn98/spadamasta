@@ -218,6 +218,39 @@ class Superadmin extends BaseController
         }
     }
 
+    public function hapus_course_masta()
+    {
+        if ($this->request->isAJAX()) {
+            $id = $this->request->getPost("id");
+            $r = $this->mastaCourseModel->where("id", $id)->first();
+            $idcoursemoodle = $r["idcourse_moodle"];
+            $tahun_masta = $r["tahun_masta"];
+
+            // hapus semua peserta/panitia/duta/dosen pada course
+            $this->mastaCourseParticipantsModel->where("tahun_masta", $tahun_masta)->delete();
+
+            // terakhir hapus course di moodle pake api
+            $perintah =  core_delete_course($idcoursemoodle);
+            if (empty($perintah['warnings'])) {
+                $this->mastaCourseModel->where("id", $id)->delete();
+                $msg = [
+                    'sukses' => true,
+                    'pesan' => "Course Masta berhasil dihapus!",
+                    'token' => csrf_hash()
+                ];
+            } else {
+                $msg = [
+                    'sukses' => false,
+                    'pesan' => $perintah['warnings']['message'],
+                    'token' => csrf_hash()
+                ];
+            }
+            echo json_encode($msg);
+        } else {
+            exit("Tidak dapat diproses");
+        }
+    }
+
     public function open_masta()
     {
         $idmastacourse = $this->request->getVar("id");

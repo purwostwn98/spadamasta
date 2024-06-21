@@ -36,7 +36,7 @@
                         <td>
                             <a href="/superadmin/open-masta?id=<?= $v["id"]; ?>" class="btn btn-sm btn-primary" target="_blank">Buka Course</a> |
                             <a href="/superadmin/setting-masta?id=<?= $v["id"]; ?>" class="btn btn-sm btn-warning"><i class="fa fa-cog"></i></a> |
-                            <button class="btn btn-sm btn-danger"><i class="fa fa-trash"></i></button>
+                            <button class="btn btn-sm btn-danger" value="<?= $v["id"]; ?>" onclick="hapusCrs(this.value)"><i class="fa fa-trash"></i></button>
                         </td>
                     </tr>
                 <?php } ?>
@@ -56,8 +56,8 @@
                 </button>
             </div>
             <form action="/superadmin/do-create-course" method="post">
+                <input type="hidden" value="<?= csrf_hash(); ?>" name="<?= csrf_token(); ?>" id="csrf">
                 <div class="modal-body">
-
                     <div class="form-group">
                         <label for="recipient-name" class="col-form-label">Nama / Judul Masta</label>
                         <input type="text" class="form-control" id="recipient-name" name="judul_masta" required>
@@ -89,6 +89,59 @@
     $(document).ready(function() {
         $('#example').DataTable();
     });
+</script>
+
+<script>
+    function hapusCrs(id) {
+        Swal.fire({
+            title: "Apakah Anda yaqin?",
+            text: "Konten course, aktivitas, dan peserta akan dihapus",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#3085d6",
+            cancelButtonColor: "#d33",
+            confirmButtonText: "Yes, delete it!"
+        }).then((result) => {
+            if (result.isConfirmed) {
+                var csrfName = 'csrf_test_name'; // CSRF Token name
+                var csrfHash = $("input[name='csrf_test_name']").val(); // CSRF hash
+                $.ajax({
+                    url: "<?= site_url('superadmin/hapus-course-masta'); ?>",
+                    type: "POST",
+                    dataType: "json",
+                    data: {
+                        id: id,
+                        [csrfName]: csrfHash
+                    },
+                    beforeSend: function() {},
+                    complete: function() {},
+                    success: function(response) {
+                        if (response.sukses == true) {
+                            Swal.fire({
+                                title: "Berhasil!",
+                                text: response.pesan,
+                                icon: "success"
+                            }).then((result) => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                title: "Gagal!",
+                                text: response.pesan,
+                                icon: "error"
+                            }).then((result) => {
+                                location.reload();
+                            });
+                        }
+                    },
+                    error: function(xhr, ajaxOptions, thrownError) {
+                        alert(xhr.status + "\n" + xhr.responseText + "\n" + thrownError);
+                    }
+                });
+            }
+        });
+
+    }
 </script>
 
 

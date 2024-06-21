@@ -39,7 +39,12 @@ class Panitia extends BaseController
             $arr_tahunmasta[] = $v["tahun_masta"];
         }
         if ($arr_tahunmasta != []) {
-            $course = $this->mastaCourseModel->whereIn("tahun_masta", $arr_tahunmasta)->findAll();
+            $tgNow = new Time('now', 'Asia/Jakarta', 'en_US');
+            $tgNowStamps = $tgNow->timestamp;
+            $course = $this->mastaCourseModel->whereIn("tahun_masta", $arr_tahunmasta)
+                ->where("tgl_selesai >=", $tgNowStamps)
+                ->where("tgl_mulai <=", $tgNowStamps)
+                ->findAll();
         } else {
             $course = [];
         }

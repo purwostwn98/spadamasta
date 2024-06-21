@@ -3,11 +3,11 @@
 <!--  Row 1 -->
 <?php $session = \Config\Services::session(); ?>
 
-<div class="media border p-3 align-items-center">
+<div class=" p-3 align-items-center">
     <div class="row">
         <div class="col-md-7">
             <div class="row">
-                <div class="col-md-auto justify-content-center bg-warning">
+                <div class="col-md-auto justify-content-center" style="background-color: #fec14f;">
                     <div class="text-center"> <img src="<?= base_url(); ?>/assets/images/profile/user-1.jpg" alt="John Doe" class="mr-auto ml-auto mt-2 mb-2 rounded-circle" style="width:80px;"> </div>
                 </div>
                 <div class="col-md-7">
@@ -17,28 +17,42 @@
                     </div>
                 </div>
             </div>
-            <?php if (!empty($course)) { ?>
-                <?php foreach ($course as $key => $v) { ?>
-                    <div class="row mt-3">
-                        <div class="col-md-12">
-                            <a target="_blank" href="/mahasiswa/open-masta?id=<?= $v["id"]; ?>" class="btn btn-primary w-100"> Buka <i>Course</i> <?= $v["judul_masta"]; ?></a>
-                        </div>
-                    </div>
-                <?php } ?>
-            <?php  } else { ?>
+            <?php if (empty($course)) { ?>
                 <div class="row mt-3">
                     <div class="col-md-12">
                         <p>Anda belum terdaftar sebagai peserta masta</p>
                     </div>
                 </div>
             <?php } ?>
-
         </div>
-        <div class="col-md-5">
-            <figure class="highcharts-figure">
-                <div id="container"></div>
-            </figure>
-        </div>
+    </div>
+</div>
+<!-- <hr style="background-color: #fec14f; height: 5px; border: none;"> -->
+<div class="row border p-3">
+    <div class="col-md-12">
+        <?php if (!empty($course)) { ?>
+            <?php foreach ($course as $key => $v) { ?>
+                <div class="row">
+                    <div class="col-md-6">
+                        <a target="_blank" href="/mahasiswa/open-masta?id=<?= $v["id"]; ?>" class="btn btn-primary w-100"> Buka <i>Course</i> <?= $v["judul_masta"]; ?></a>
+                        <a target="_blank" href="/mahasiswa/open-masta?id=<?= $v["id"]; ?>" class="btn text-primary w-100 mt-2" style="background-color: #fec14f;"> <i class="fa fa-print"></i> Cetak Sertifikat <?= $v["judul_masta"]; ?></a>
+                    </div>
+                    <?php if ($key == 0) { ?>
+                        <div class="col-md-6 justify-content-center">
+                            <figure style="width: 100%;">
+                                <div id="container"></div>
+                            </figure>
+                        </div>
+                    <?php  } ?>
+                </div>
+            <?php } ?>
+        <?php  } else { ?>
+            <div class="row mt-3">
+                <div class="col-md-12">
+                    <p>-</p>
+                </div>
+            </div>
+        <?php } ?>
     </div>
 </div>
 
@@ -69,6 +83,7 @@
         },
         plotOptions: {
             series: {
+                colors: ['#2f3185', '#fec14f'],
                 allowPointSelect: true,
                 cursor: 'pointer',
                 dataLabels: [{
@@ -96,8 +111,8 @@
             colorByPoint: true,
             data: [{
                     name: 'Progress',
-                    sliced: true,
-                    selected: true,
+                    sliced: false,
+                    selected: false,
                     y: 80
                 },
                 {

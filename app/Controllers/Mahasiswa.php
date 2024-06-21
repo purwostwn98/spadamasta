@@ -12,6 +12,7 @@ use App\Models\MoodleUserEnrolmentModel;
 use App\Models\MoodleRoleAssignmentModel;
 use App\Models\MoodleGroupsModel;
 use App\Models\MoodleGroupsMembersModel;
+use App\Models\TokenLoginModel;
 use CodeIgniter\I18n\Time;
 use SebastianBergmann\CodeCoverage\Report\PHP;
 
@@ -27,6 +28,7 @@ class Mahasiswa extends BaseController
     protected $moodleGroupsMembersModel;
     protected $lembagaProdiModel;
     protected $lembagaFakultasModel;
+    protected $tokenLoginModel;
 
     public function __construct()
     {
@@ -41,6 +43,7 @@ class Mahasiswa extends BaseController
         $this->moodleRoleAssignmentModel = new MoodleRoleAssignmentModel();
         $this->moodleGroupsModel = new MoodleGroupsModel();
         $this->moodleGroupsMembersModel = new MoodleGroupsMembersModel();
+        $this->tokenLoginModel = new TokenLoginModel();
     }
 
     public function dashboard(): string
@@ -70,17 +73,18 @@ class Mahasiswa extends BaseController
         $idmastacourse = $this->request->getVar("id");
         $nim = strtolower($this->session->get("userdata")["iduser"]);
         $r_mastacourse = $this->mastaCourseModel->where("id", $idmastacourse)->first();
+        $spadauser = $this->userAuthModel->where("username", $nim)->first();
 
         //siapkan data
         $id_course = $r_mastacourse['idcourse_moodle'];
         $enrolid = get_enrolid($id_course);
         $contextid = get_contexid($id_course);
+        $t = 0;
 
         //cek apakah sudah terdaftar sebagai user moodle
         $moodleuser = $this->moodleUserModel->where("idnumber", $nim)->first();
         if (empty($moodleuser)) {
             // Tambah user moodle dulu
-            $spadauser = $this->userAuthModel->where("username", $nim)->first();
             $nama = nama_depanbelakang($spadauser['nama_pengguna']);
             $nama_depan = $nama[0];
             $nama_belakang = $nama[1];
@@ -116,35 +120,48 @@ class Mahasiswa extends BaseController
 
         // cek group fakultas mahasiswa dan duta
 
-        if ($p["keterangan"] != "editingteacher" || $p["keterangan"] != "panitia") {
-            if ($p["idlembaga_fakultas"] != null || $p["idlembaga_fakultas"] != "allfakultas") {
-                //cek group di moodle
-                $idNumberGroup = md5($p["idlembaga_fakultas"] . $p["tahun_masta"]);
-                $group = $this->moodleGroupsModel->where(['idnumber' => $idNumberGroup, 'courseid' => $id_course])->first();
-                if (!empty($group)) {
-                    $idgroup = $group['id'];
-                } else {
-                    $f = $this->lembagaFakultasModel->where("idlembaga_fakultas", $p["idlembaga_fakultas"])->select("nama_fakultas")->first();
-                    $nama_kelas = $f["nama_fakultas"];
-                    $idgroup = $this->moodleGroupsModel->simpan($id_course, $idNumberGroup, $nama_kelas);
-                }
+        if ($p["keterangan"] != "editingteacher") {
+            if ($p["keterangan"] != "panitia") {
+                if ($p["idlembaga_fakultas"] != null || $p["idlembaga_fakultas"] != "allfakultas") {
+                    //cek group di moodle
+                    $idNumberGroup = md5($p["idlembaga_fakultas"] . $p["tahun_masta"]);
+                    $group = $this->moodleGroupsModel->where(['idnumber' => $idNumberGroup, 'courseid' => $id_course])->first();
+                    if (!empty($group)) {
+                        $idgroup = $group['id'];
+                    } else {
+                        $f = $this->lembagaFakultasModel->where("idlembaga_fakultas", $p["idlembaga_fakultas"])->select("nama_fakultas")->first();
+                        $nama_kelas = $f["nama_fakultas"];
+                        $idgroup = $this->moodleGroupsModel->simpan($id_course, $idNumberGroup, $nama_kelas);
+                    }
 
-                //perbarui fakultas
-                $group_old = $this->moodleGroupsMembersModel->where('userid', $idusermoodle)
-                    ->join('mdl_groups', 'mdl_groups_members.groupid = mdl_groups.id')
-                    ->where('mdl_groups.idnumber', $idNumberGroup)
-                    ->where('courseid', $id_course)->first();
-                if (empty($group_old['groupid'])) {
-                    // assign user ke group fakultas
-                    $this->moodleGroupsMembersModel->simpan($idgroup, $idusermoodle);
-                } elseif ($group_old['groupid'] != $idgroup) {
-                    // update user ke group fakultas baru 
-                    $this->moodleGroupsMembersModel->update_kelas($group_old['groupid'], $idgroup, $idusermoodle);
+                    //perbarui fakultas
+                    $group_old = $this->moodleGroupsMembersModel->where('userid', $idusermoodle)
+                        ->join('mdl_groups', 'mdl_groups_members.groupid = mdl_groups.id')
+                        ->where('mdl_groups.idnumber', $idNumberGroup)
+                        ->where('courseid', $id_course)->first();
+                    if (empty($group_old['groupid'])) {
+                        // assign user ke group fakultas
+                        $this->moodleGroupsMembersModel->simpan($idgroup, $idusermoodle);
+                        $t = 1;
+                    } elseif ($group_old['groupid'] != $idgroup) {
+                        // update user ke group fakultas baru 
+                        $t = 1;
+                        $this->moodleGroupsMembersModel->update_kelas($group_old['groupid'], $idgroup, $idusermoodle);
+                    }
                 }
             }
         }
-
-        $tokenmasukmoodle = $this->session->get("token_moodle");
+        if ($t == 1) {
+            $timeNow = Time::now('Asia/Jakarta', 'en_US');
+            $kode_sync = $timeNow->getTimestamp();
+            $token = md5($nim . $kode_sync . 'purwostwn');
+            $nama = nama_depanbelakang($spadauser['nama_pengguna']);
+            $nama_depan = $nama[0];
+            $nama_belakang = $nama[1];
+            $tokenmasukmoodle = $this->tokenLoginModel->simpan($token, strtolower($nim), 'tanyapurwo', $nama_depan, $nama_belakang, $spadauser['email_pengguna'], strtolower($nim), 0);
+        } else {
+            $tokenmasukmoodle = $this->session->get("token_moodle");
+        }
         return redirect()->to($_ENV['urlmoodle'] . '/course/view.php?id=' . $id_course . '&token=' . $tokenmasukmoodle);
     }
 }
